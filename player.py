@@ -4,6 +4,7 @@ import pygame
 rect = pygame.Rect((0, 0), (10, 10))
 grounded = None
 sliding = None
+on_right = True
 vx = 0
 vy = 0
 sprite = pygame.Surface((rect.width, rect.height))
@@ -20,10 +21,18 @@ def init():
 def jump():
     global grounded
     global vy
+    global vx
     # breakpoint()
     if grounded:
         print("Jump!!!")
         vy = -10
+    if sliding:
+        print("jump!!")
+        vy -= 5
+        if on_right:
+            vx += 5
+        else:
+            vx -= 5
 
 
 def tick():
@@ -34,12 +43,15 @@ def tick():
     if grounded:
         check_grounded()
         check_walls()
+    elif sliding:
+        check_sliding()
     else:
         check_new_collisions()
 
     if not grounded:
         vy += 0.5
-
+    if sliding:
+        vy += -0.5 - vy / 5
     process_inputs()
 
 # this should go in iehter a entity util or collider file or something of the lsort
@@ -65,13 +77,37 @@ def check_walls():
     pass
 
 
+def check_sliding():
+    global vx
+    global rect
+    if pygame.Rect.colliderect(rect, sliding):
+        vx = 0
+        if on_right:
+            rect.left = sliding.right
+        else:
+            rect.right = sliding.left
+    # hmm... this is starting to look funny...
+    elif ((on_right and rect.left == sliding.right
+            or not on_right and rect.right == sliding.left)
+          and rect.bottom > sliding.top
+          and rect.top < sliding.bottom):
+        pass
+    else:
+        check_new_collisions()
+
 # TODO: force some of the funcionality of this into multiple utilities
+
+
 def check_new_collisions():
+    # this is not looking too good, maybe shouldn't have 6 globals...
     global grounded
+    global sliding
     global rect
     global vy
     global vx
+    global on_right
     grounded = None
+    sliding = None
     prev_hbox = rect.move(-vx, -vy)
     collider = pygame.Rect.union(rect, prev_hbox)
     for platform in level.platforms:
@@ -80,16 +116,19 @@ def check_new_collisions():
             # roll back one step
             # figure out exast collision point based on that
             if prev_hbox.top < platform.bottom and prev_hbox.bottom > platform.top:
-                sliding = True
+                sliding = platform
                 print("Side collision")
                 # TODO: impliment something like grounding for sliding
                 vx = 0
+                vy -= 1
+                vy = max(vy, 0)
                 if prev_hbox.left >= platform.right:
                     rect.left = platform.right
+                    on_right = True
                 else:
                     rect.right = platform.left
+                    on_right = False
             else:
-                sliding = False
                 # if prev_hbox.left < platform.right and prev_hbox.right > platform.left:
                 if prev_hbox.bottom <= platform.top:
                     if vy > 0:
@@ -105,12 +144,18 @@ def check_new_collisions():
 
 def process_inputs():
     global vx
-    if ord('a') in input_manager.keys:
-        vx = -2
-    elif ord('d') in input_manager.keys:
-        vx = 2
+    if grounded:
+        if ord('a') in input_manager.keys:
+            vx = -2
+        elif ord('d') in input_manager.keys:
+            vx = 2
+        else:
+            vx = 0
     else:
-        vx = 0
+        if ord('a') in input_manager.keys and vx > -2:
+            vx -= 0.5
+        elif ord('d') in input_manager.keys and vx < 2:
+            vx += 0.5
 
 
 def render(_):

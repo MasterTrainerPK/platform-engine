@@ -7,14 +7,16 @@ import player
 pygame.init()
 
 # should get display height and width, to help make a reasonably sized window
-screen = pygame.display.set_mode((500, 500), pygame.SCALED)
+screen = pygame.display.set_mode((640, 360), pygame.SCALED, pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 running = True
 level.platforms.append(pygame.Rect(0, 300, 50, 200))
 level.platforms.append(pygame.Rect(100, 300, 100, 2))
+level.platforms.append(pygame.Rect(0, 10000, 1000, 1))
 main = camera.Camera(0, 0)
 main.renderlist.append(level.render)
 main.renderlist.append(player.render)
+main.rect.center = player.rect.center
 # platofrms should be in chuncks for more efficient loading
 while running:
     # tick
@@ -25,6 +27,12 @@ while running:
             # manage event
             input_manager.event(event)
     player.tick()
+    main.rect.centerx = pygame.math.lerp(
+        main.rect.centerx, player.rect.centerx, 0.2)
+    main.rect.centery = pygame.math.lerp(
+        main.rect.centery, player.rect.centery, 0.2)
+    if player.rect.bottom + 100 > main.rect.bottom:
+        main.rect.bottom = player.rect.bottom + 100
     # roll back one step
     # figure out exast collision point based on that
     screen.fill("black")
