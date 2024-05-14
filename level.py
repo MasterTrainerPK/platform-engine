@@ -1,5 +1,5 @@
 import pygame
-
+# TODO: make this an object maybe
 platforms = []
 surface = None
 bounding_box = None
@@ -18,8 +18,14 @@ def create_surface():
     global surface
     global bounding_box
     get_bounding_box()
-    surface = pygame.Surface((bounding_box.width, bounding_box.height))
+    surface = pygame.Surface(
+        (bounding_box.width, bounding_box.height)).convert_alpha()
     surface.fill(pygame.Color(0, 0, 0, 0))
+
+
+def refresh():
+    global surface
+    surface = None
 
 
 # this will render assuming that the scene is static.
@@ -29,5 +35,7 @@ def render(rect):
     if not surface:
         create_surface()
         for platform in platforms:
-            pygame.draw.rect(surface, "red", platform, width=2)
+            translatedPlatform = platform.move(
+                -bounding_box.left, -bounding_box.top)
+            pygame.draw.rect(surface, "red", translatedPlatform, width=2)
     return bounding_box, surface

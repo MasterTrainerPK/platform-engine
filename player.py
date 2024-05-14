@@ -18,7 +18,7 @@ def init():
 
 
 @input_manager.on_key_down("w")
-def jump():
+def jump(_):
     global grounded
     global vy
     global vx
@@ -118,7 +118,6 @@ def check_new_collisions():
             if prev_hbox.top < platform.bottom and prev_hbox.bottom > platform.top:
                 sliding = platform
                 print("Side collision")
-                # TODO: impliment something like grounding for sliding
                 vx = 0
                 vy -= 1
                 vy = max(vy, 0)
