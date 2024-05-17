@@ -3,49 +3,59 @@ import camera
 import level
 import input_manager
 import sys
-import re
+import engine
+import player
+import main
 
 startPos = None
 dragging = False
 
 
-@input_manager.on_key_down('p')
+def quit_game(my_engine: engine.Engine):
+    def quit(event):
+        my_engine.running = False
+    return quit
+
+
 def play_game(_):
-    global running
-    global main
-    running = False
-    main.renderlist.clear()
-    pygame.quit()
-    import main
+    input_manager.input_handler_push()
+    camera.registered['foreground'].renderlist.append(player.render)
+    main.myLevel = myLevel
+    player.regiser_event_handlers()
+    gameEngine = engine.Engine()
+    input_manager.on_key_down('p')(quit_game(gameEngine))
+    gameEngine.loop(main.tick, main.render, (lambda: None), 60)
+    gameEngine.deinit()
+    input_manager.input_handler_pop()
+    pass
 
 
-@input_manager.on_m_button_down(1)
-def startDrag(e):
+def start_drag(e):
     global dragging
     global startPos
-    startPos = main.toWorldSpace(e.pos, True)
+    startPos = camera.registered['foreground'].toWorldSpace(e.pos, True)
     dragging = True
 
 
-@input_manager.on_m_button_up(1)
-def endDrag(e):
+def end_drag(e):
     global dragging
     dragging = False
     print(e.pos)
-    endPos = main.toWorldSpace(e.pos, True)
+    endPos = camera.registered['foreground'].toWorldSpace(e.pos, True)
     print(endPos)
     width = endPos[0] - startPos[0]
     height = endPos[1] - startPos[1]
     print("platform width:", width, "platform height:", height)
     rect = pygame.Rect(startPos, (width, height))
     rect.normalize()
-    level.platforms.append(rect)
-    level.refresh()
+    myLevel.platforms.append(rect)
+    myLevel.refresh()
 
 
-def renderDrag(rect):
+def render_drag(rect):
     if dragging:
-        endPos = main.toWorldSpace(pygame.mouse.get_pos(), True)
+        endPos = camera.registered['foreground'].toWorldSpace(
+            pygame.mouse.get_pos(), True)
         size = (endPos[0] - startPos[0], endPos[1] - startPos[1])
         rect = pygame.Rect(startPos, size)
         rect.normalize()
@@ -61,7 +71,7 @@ def renderDrag(rect):
     return (None, None)
 
 
-def moveCamera():
+def move_camera():
     vx = 0
     vy = 0
     if ord('a') in input_manager.keys:
@@ -72,42 +82,44 @@ def moveCamera():
         vy += -scaleFactor * 2
     if ord('s') in input_manager.keys:
         vy += scaleFactor * 2
-    main.rect.move_ip((vx, vy))
+    camera.registered['foreground'].rect.move_ip((vx, vy))
 
 
-if len(sys.argv) == 2:
-    filename = sys.argv[1]
-else:
-    filename = input("Filename:")
+def register_event_handlers():
+    input_manager.on_key_down('p')(play_game)
+    input_manager.on_m_button_down(1)(start_drag)
+    input_manager.on_m_button_up(1)(end_drag)
+
 
 scaleFactor = 1
-pygame.init()
-pattern = re.compile(r'mono')
-print([x for x in pygame.font.get_fonts() if pattern.match(x)])
-# should get display height and width, to help make a reasonably sized window
-screen = pygame.display.set_mode(pygame.display.get_desktop_sizes()[0],
-                                 pygame.SCALED,
-                                 pygame.FULLSCREEN)
-clock = pygame.time.Clock()
-running = True
-level.platforms.append(pygame.Rect(0, 0, 50, 50))
-main = camera.Camera(0, 0, (640, 360))
-main.renderlist.append(level.render)
-main.renderlist.append(renderDrag)
-text = pygame.font.Font('freesansbold.ttf', 32) \
-    .render("File: " + filename, False, pygame.Color(255, 100, 100, 255))
-screen.blit(text, (0, 0))
-while running:
-    # tick
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        else:
-            input_manager.event(event)
-            # manage event
-    moveCamera()
-    screen.blit(text, (0, 0))
-    main.render()
-    pygame.display.flip()
-    pygame.display.get_surface().fill((0, 0, 0))
-    clock.tick(60)
+myLevel = None
+
+
+def run():
+    if len(sys.argv) == 2:
+        filename = sys.argv[1]
+    else:
+        filename = input("Filename:")
+    global myLevel
+    myLevel = level.Level()
+    myLevel.platforms.append(pygame.Rect(0, 0, 50, 50))
+    main = camera.Camera((0, 0), (640, 360))
+    ui = camera.Camera()
+    main.renderlist.append(myLevel.render)
+    main.renderlist.append(render_drag)
+    text = pygame.font.Font('freesansbold.ttf', 32) \
+        .render("File: " + filename, False, pygame.Color(255, 100, 100, 255))
+    register_event_handlers()
+    ui.renderlist.append(lambda _: (text.get_rect(), text))
+    camera.register(main, 'foreground')
+    camera.register(ui, 'ui')
+    myEngine = engine.Engine()
+    myEngine.loop(move_camera, (lambda: None), (lambda: None), 60)
+    myEngine.deinit()
+
+
+if __name__ == '__main__':
+    pygame.init()
+    pygame.display.set_mode(pygame.display.get_desktop_sizes()[
+                            0], pygame.FULLSCREEN)
+    run()

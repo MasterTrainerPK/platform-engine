@@ -1,25 +1,29 @@
 import pygame
-registered = []
+registered = dict()
 
 
 class Camera:
-    def __init__(self, world_x, world_y, size=(0, 0)):
+    def __init__(self, worldpos=(0, 0), size=(0, 0), surface=None):
+        if surface is None:
+            surface = pygame.display.get_surface()
+        self.dest = surface
         if size[0] == 0 or size[1] == 0:
             print("assuming screen size")
+            size = surface.get_size()
             self.surface = pygame.surface.Surface(
-                pygame.display.get_surface().get_size()).convert_alpha()
+                size
+            ).convert_alpha()
             self.scaled_surface = self.surface
-            size = pygame.display.get_surface().get_size()
             self.scaled = False
         else:
             self.surface = pygame.surface.Surface(size).convert_alpha()
             self.scaled_surface = pygame.surface.Surface(
-                pygame.display.get_surface().get_size()).convert_alpha()
+                surface.get_size()
+            ).convert_alpha()
             self.scaled = True
         print("width: ", size[0], "height: ", size[1])
         self.rect: pygame.Rect = pygame.Rect(
-            (world_x, world_y), size)
-        registered.append(self)
+            worldpos, size)
         self.renderlist = []
 
     def render(self):
@@ -33,14 +37,14 @@ class Camera:
             self.surface.blit(surface,
                               (bounding_box.x - self.rect.x,
                                bounding_box.y - self.rect.y),
-                              special_flags=pygame.BLEND_ALPHA_SDL2)
-
+                              special_flags=pygame.BLEND_ALPHA_SDL2
+                              )
         if self.scaled:
             pygame.transform.scale(
                 self.surface, self.scaled_surface.get_size(), self.scaled_surface)
-            pygame.display.get_surface().blit(self.scaled_surface, (0, 0))
+            self.dest.blit(self.scaled_surface, (0, 0))
         else:
-            pygame.display.get_surface().blit(
+            self.dest.blit(
                 self.surface, (0, 0), special_flags=pygame.BLEND_ALPHA_SDL2)
 
     def changeScale(self, newScale):
@@ -75,3 +79,8 @@ class Camera:
         if self.scaled:
             worldPos = self.toScreenScale(worldPos, round)
         return worldPos
+
+
+def register(camera: Camera, name: str):
+    if camera:
+        registered[name] = camera

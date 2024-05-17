@@ -17,7 +17,6 @@ def init():
     rect.bottom = pygame.display.get_surface().get_height()
 
 
-@input_manager.on_key_down("w")
 def jump(_):
     global grounded
     global vy
@@ -35,18 +34,18 @@ def jump(_):
             vx -= 5
 
 
-def tick():
+def tick(level):
     global rect
     global vy
     global grounded
     rect.move_ip(vx, vy)
     if grounded:
-        check_grounded()
-        check_walls()
+        check_grounded(level)
+        check_walls(level)
     elif sliding:
-        check_sliding()
+        check_sliding(level)
     else:
-        check_new_collisions()
+        check_new_collisions(level)
 
     if not grounded:
         vy += 0.5
@@ -57,7 +56,7 @@ def tick():
 # this should go in iehter a entity util or collider file or something of the lsort
 
 
-def check_grounded():
+def check_grounded(level):
     global vy
     global rect
     if pygame.Rect.colliderect(rect, grounded):
@@ -69,15 +68,15 @@ def check_grounded():
             and rect.right > grounded.left):
         pass
     else:
-        check_new_collisions()
+        check_new_collisions(level)
 
 
-# FIXME: impliment.
-def check_walls():
+# TODO: impliment.
+def check_walls(level):
     pass
 
 
-def check_sliding():
+def check_sliding(level):
     global vx
     global rect
     if pygame.Rect.colliderect(rect, sliding):
@@ -93,12 +92,12 @@ def check_sliding():
           and rect.top < sliding.bottom):
         pass
     else:
-        check_new_collisions()
+        check_new_collisions(level)
 
 # TODO: force some of the funcionality of this into multiple utilities
 
 
-def check_new_collisions():
+def check_new_collisions(level):
     # this is not looking too good, maybe shouldn't have 6 globals...
     global grounded
     global sliding
@@ -165,3 +164,7 @@ def render(_):
         color = "red"
     pygame.draw.rect(sprite, color, sprite.get_rect(), width=3)
     return ((rect), sprite)
+
+
+def regiser_event_handlers():
+    input_manager.on_key_down('w')(jump)
